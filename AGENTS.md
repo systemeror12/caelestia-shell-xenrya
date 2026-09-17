@@ -65,8 +65,10 @@ Read only the sources that apply to the task.
 - Validate incrementally. While changing code, run focused tests and
   affected-package checks. For production implementation, run repository-wide
   validation once after the final code change; rerun it only after a relevant
-  fix. For documentation-only changes, use focused checks unless the user asks
-  for wider validation.
+  fix. Before launching a changed shell in the live desktop session, run
+  `scripts/test-shell.sh` for an isolated Quickshell smoke test. For
+  documentation-only changes, use focused checks unless the user asks for wider
+  validation.
 - Use shell commands and repo-native tools by default. Use computer-use or
   browser automation only when the user explicitly asks for it.
 - Apply `$unslop-response` to every user-facing response.
