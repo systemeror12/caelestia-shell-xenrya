@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qmetatype.h>
 #include <qobject.h>
 #include <qvariant.h>
 
@@ -11,8 +12,17 @@ namespace caelestia::settings {
 inline QVariantMap vmap(std::initializer_list<std::pair<QString, QVariant>> entries) {
     QVariantMap map;
     for (const auto& [key, value] : entries)
-        map.insert(std::move(key), std::move(value));
+        map.insert(key, value);
     return map;
+}
+
+template <typename... Ts> inline QList<QMetaType> unionTypes() {
+    static_assert(sizeof...(Ts) >= 2, "A union needs at least two types");
+    // If the max size is changed, common.cpp `mismatchStr` must be updated
+    static_assert(sizeof...(Ts) <= 4, "A union cannot have more than 4 types");
+    static_assert((!std::is_same_v<Ts, QVariant> && ...), "A union cannot contain QVariant");
+
+    return { QMetaType::fromType<Ts>()... };
 }
 
 namespace detail {
@@ -81,6 +91,9 @@ public:                                                                         
         if (!true /* TODO: validation */)                                                                              \
             return;                                                                                                    \
                                                                                                                        \
+        if (rejectInvalidWrite(QStringLiteral(#name), value))                                                          \
+            return; /* Skip writes of the wrong type */                                                                \
+                                                                                                                       \
         if (rejectGlobalWrite(QStringLiteral(#name)))                                                                  \
             return; /* Skip writes to global only keys, they should be sent to the global layer */                     \
                                                                                                                        \
@@ -93,12 +106,10 @@ public:                                                                         
     Q_SIGNAL void name##Changed();                                                                                     \
                                                                                                                        \
 private:                                                                                                               \
-    Type m_##name = fallbackValue(&Self::m_##name, caelestia::settings::DefaultSpec::resolve<Type>(this, defaultVal)); \
+    Type m_##name = fallbackValue(&Self::m_##name, defaultVal);                                                        \
     inline static const bool s_register_##name =                                                                       \
         (caelestia::settings::Schema::annotate(&staticMetaObject, QStringLiteral(#name),                               \
-             { .defaultValue = caelestia::settings::DefaultSpec::create<Type>(defaultVal),                             \
-                 .globalOnly = global,                                                                                 \
-                 __VA_ARGS__ }),                                                                                       \
+             { .defaultValue = QVariant::fromValue<Type>(defaultVal), .globalOnly = global, __VA_ARGS__ }),            \
             true);
 
 #define SETTINGS_PROPERTY(Type, name, defaultVal, ...)                                                                 \
@@ -169,7 +180,7 @@ private:                                                                        
     Type* m_##name = new Type(fallbackValue(&Self::m_##name, nullptr), this, global);                                  \
     inline static const bool s_register_##name =                                                                       \
         (caelestia::settings::Schema::annotate(&staticMetaObject, QStringLiteral(#name),                               \
-             { .defaultValue = caelestia::settings::DefaultSpec::create<QList<QVariantMap>>(defaultVal),               \
+             { .defaultValue = QVariant::fromValue<QList<QVariantMap>>(defaultVal),                                    \
                  .globalOnly = global,                                                                                 \
                  __VA_ARGS__ }),                                                                                       \
             true);
