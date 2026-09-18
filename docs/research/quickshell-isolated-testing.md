@@ -102,11 +102,11 @@ It checks that:
 - the process remains alive for the requested test window;
 - an optional compositor screenshot can be captured.
 
-The source checkout keeps `settings.watchFiles: true` in
-[`shell.qml`](../../shell.qml), while the install rule writes a generated copy
-with watching disabled in [`CMakeLists.txt`](../../CMakeLists.txt). This makes
-the checkout suitable for long-running interactive development sessions. Each
-run starts from a fresh temporary snapshot of the selected visual state.
+The source checkout sets `settings.watchFiles: false` in
+[`shell.qml`](../../shell.qml). The install rule in
+[`CMakeLists.txt`](../../CMakeLists.txt) writes the same value into the
+installed copy. Each run starts from a fresh temporary snapshot of the selected
+visual state.
 
 ## What remains shared or unavailable
 

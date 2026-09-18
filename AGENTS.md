@@ -47,9 +47,9 @@ Read only the sources that apply to the task.
   `GlobalConfig` only for options deliberately defined as global. Raw
   `QObject`s do not inherit a screen; pass or select the screen explicitly.
 - Change source files, not `build/`, generated QML metadata, or installed
-  copies. The root `CMakeLists.txt` deliberately rewrites
-  `settings.watchFiles` in its generated `shell.qml`, and the Nix wrapper adds
-  paths and environment variables that do not exist in a source checkout.
+  copies. The root `CMakeLists.txt` generates an installed copy of `shell.qml`,
+  and the Nix wrapper adds paths and environment variables that do not exist in
+  a source checkout.
 - Register every new C++ or QML plugin type in the owning `CMakeLists.txt` and
   link its dependencies there. A file present in the tree is not necessarily
   part of a QML module or package.
