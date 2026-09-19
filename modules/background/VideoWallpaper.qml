@@ -38,6 +38,8 @@ Item {
     }
     onPausedChanged: syncPlayback()
 
+    // QtMultimedia types may be absent from qmllint's import path.
+    // qmllint disable unresolved-type unqualified
     VideoOutput {
         id: output
 
@@ -71,4 +73,5 @@ Item {
             }
         }
     }
+    // qmllint enable unresolved-type unqualified
 }
