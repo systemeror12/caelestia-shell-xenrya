@@ -123,7 +123,16 @@ Singleton {
     ImageAnalyser {
         id: analyser
 
-        source: Wallpapers.current
+        source: Wallpapers.isVideo(Wallpapers.current) ? Wallpapers.thumbnailPath(Wallpapers.current) : Wallpapers.current
+    }
+
+    Connections {
+        function onThumbnailRevisionChanged(): void {
+            if (Wallpapers.isVideo(Wallpapers.current))
+                analyser.requestUpdate();
+        }
+
+        target: Wallpapers
     }
 
     Timer {

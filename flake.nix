@@ -10,7 +10,7 @@
     };
 
     caelestia-cli = {
-      url = "github:caelestia-dots/cli";
+      url = "github:AdiAmbassador/caelestia-cli-aw";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.caelestia-shell.follows = "";
     };
