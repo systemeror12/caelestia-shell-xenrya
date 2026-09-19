@@ -170,6 +170,8 @@ Static images and `.mp4`, `.webm`, or `.mkv` videos can be placed anywhere under
 Video thumbnails are generated automatically when the directory changes.
 
 To set the wallpaper, you can type `>wallpaper` in the launcher to open the wallpaper switcher.
+Use the Static and Animated buttons to filter the picker, or press `Ctrl+Tab` to switch between them. The Refresh
+button in the Animated view reruns video thumbnail extraction and reloads the thumbnails.
 Alternatively, you can also use `caelestia wallpaper -f <path_to_wallpaper>` to set the wallpaper directly.
 Use `caelestia wallpaper -h` for more info about this command.
 

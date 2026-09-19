@@ -87,6 +87,12 @@ Item {
         Keys.onEscapePressed: root.screenState.launcher = false
 
         Keys.onPressed: event => {
+            if (list.showWallpapers && (event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Tab) {
+                list.toggleWallpaperType();
+                event.accepted = true;
+                return;
+            }
+
             if (!GlobalConfig.launcher.vimKeybinds)
                 return;
 

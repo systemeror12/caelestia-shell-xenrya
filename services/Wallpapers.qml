@@ -24,6 +24,8 @@ Searcher {
     property bool pendingPreviewClear
     property string thumbnailRevision
 
+    readonly property bool thumbnailsRefreshing: extractThumbnailsProc.running
+
     function cleanPath(path: string): string {
         const clean = String(path ?? "").split(/[?#]/)[0];
         return clean.startsWith("file://") ? clean.slice(7) : clean;
@@ -52,6 +54,11 @@ Searcher {
 
         const revision = thumbnailRevision ? `?v=${thumbnailRevision}` : "";
         return `file://${thumbnailPath(path)}${revision}`;
+    }
+
+    function refreshVideoThumbnails(): void {
+        if (!extractThumbnailsProc.running)
+            extractThumbnailsProc.running = true;
     }
 
     function getCategoryFor(w: FileSystemEntry): string {
@@ -157,10 +164,7 @@ Searcher {
         id: thumbnailRefreshTimer
 
         interval: 300
-        onTriggered: {
-            if (!extractThumbnailsProc.running)
-                extractThumbnailsProc.running = true;
-        }
+        onTriggered: root.refreshVideoThumbnails()
     }
 
     Process {

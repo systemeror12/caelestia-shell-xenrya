@@ -14,6 +14,7 @@ PathView {
     required property var screenState
     required property var panels
     required property var content
+    required property bool showAnimated
 
     readonly property int itemWidth: Tokens.sizes.launcher.wallpaperWidth * 0.8 + Tokens.padding.medium * 2
 
@@ -49,11 +50,22 @@ PathView {
 
         readonly property string search: root.search.text.split(" ").slice(1).join(" ")
 
-        values: Wallpapers.query(search)
-        onValuesChanged: root.currentIndex = search ? 0 : values.findIndex(w => w.path === Wallpapers.actualCurrent)
+        values: Wallpapers.query(search).filter(w => Wallpapers.isVideo(w.path) === root.showAnimated)
+        onValuesChanged: {
+            if (values.length === 0) {
+                Wallpapers.stopPreview();
+                return;
+            }
+
+            const current = values.findIndex(w => w.path === Wallpapers.actualCurrent);
+            root.currentIndex = search ? 0 : Math.max(0, current);
+        }
     }
 
-    Component.onCompleted: currentIndex = Wallpapers.list.findIndex(w => w.path === Wallpapers.actualCurrent)
+    Component.onCompleted: {
+        const current = scriptModel.values.findIndex(w => w.path === Wallpapers.actualCurrent);
+        currentIndex = Math.max(0, current);
+    }
     Component.onDestruction: Wallpapers.stopPreview()
 
     onCurrentItemChanged: {
