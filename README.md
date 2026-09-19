@@ -70,7 +70,7 @@ For home-manager, you can also use Caelestia's Home Manager module (explained in
 
 Dependencies:
 
--   [`caelestia-cli`](https://github.com/caelestia-dots/cli)
+-   [`caelestia-cli-aw`](https://github.com/AdiAmbassador/caelestia-cli-aw)
 -   [`quickshell-git`](https://git.outfoxxed.me/quickshell/quickshell) - this has to be the git version, not the latest tagged version
 -   `glibc`
 -   `gcc-libs`
@@ -93,6 +93,8 @@ Dependencies:
 -   [`swappy`](https://github.com/jtheoof/swappy)
 -   [`fish`](https://github.com/fish-shell/fish-shell)
 -   [`bash`](https://www.gnu.org/software/bash)
+-   [`ffmpeg`](https://ffmpeg.org)
+-   `qt6-multimedia`
 
 Build dependencies:
 
@@ -164,6 +166,8 @@ or by manually copying or symlinking your image to the path.
 
 The wallpapers for the wallpaper switcher are read from `~/Pictures/Wallpapers`
 by default. To change it, modify `paths.wallpaperDir` in `~/.config/caelestia/shell.json`.
+Static images and `.mp4`, `.webm`, or `.mkv` videos can be placed anywhere under that directory.
+Video thumbnails are generated automatically when the directory changes.
 
 To set the wallpaper, you can type `>wallpaper` in the launcher to open the wallpaper switcher.
 Alternatively, you can also use `caelestia wallpaper -f <path_to_wallpaper>` to set the wallpaper directly.
@@ -382,6 +386,10 @@ For example, to automatically hide the bar on the monitor named `DP-1`:
     "background": {
         "enabled": true,
         "wallpaperEnabled": true,
+        "animatedWallpaper": {
+            "pauseOnBattery": false,
+            "pauseOnWindows": true
+        },
         "desktopClock": {
             "enabled": false,
             "scale": 1.0,
@@ -948,6 +956,8 @@ and implementing various feature requests.
 
 Another special thanks to [@end_4](https://github.com/end-4) for his [config](https://github.com/end-4/dots-hyprland)
 which helped me a lot with learning how to use Quickshell.
+
+Animated wallpaper support is based on [@AdiAmbassador's Caelestia-AW fork](https://github.com/AdiAmbassador/caelestia-shell-aw).
 
 Finally, another thank you to all the configs I took inspiration from (only one for now):
 

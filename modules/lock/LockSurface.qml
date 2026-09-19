@@ -187,8 +187,27 @@ WlSessionLockSurface {
     Component {
         id: wallpaperBackground
 
+        Loader {
+            anchors.fill: parent
+            sourceComponent: Wallpapers.isVideo(Wallpapers.current) ? videoWallpaperBackground : staticWallpaperBackground
+        }
+    }
+
+    Component {
+        id: staticWallpaperBackground
+
         CachingImage {
             path: Wallpapers.current
+        }
+    }
+
+    Component {
+        id: videoWallpaperBackground
+
+        Image {
+            asynchronous: true
+            fillMode: Image.PreserveAspectCrop
+            source: Wallpapers.displaySource(Wallpapers.current)
         }
     }
 

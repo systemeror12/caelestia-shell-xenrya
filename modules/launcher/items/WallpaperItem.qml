@@ -13,6 +13,8 @@ Item {
     required property FileSystemEntry modelData
     required property ScreenState screenState
 
+    readonly property bool isVideo: Wallpapers.isVideo(modelData.path)
+
     scale: 0.5
     opacity: 0
     z: PathView.z ?? 0 // qmllint disable missing-property
@@ -66,12 +68,36 @@ Item {
 
         CachingImage {
             anchors.fill: parent
-            path: root.modelData.path
+            path: root.isVideo ? "" : root.modelData.path
+            visible: !root.isVideo
             smooth: !root.PathView.view.moving
             sourceSize: {
                 const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
                 return Qt.size(image.implicitWidth * dpr, image.implicitHeight * dpr);
             }
+        }
+
+        Image {
+            anchors.fill: parent
+            asynchronous: true
+            fillMode: Image.PreserveAspectCrop
+            source: root.isVideo ? Wallpapers.displaySource(root.modelData.path) : ""
+            visible: root.isVideo
+            smooth: !root.PathView.view.moving
+            sourceSize: {
+                const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
+                return Qt.size(image.implicitWidth * dpr, image.implicitHeight * dpr);
+            }
+        }
+
+        MaterialIcon {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: Tokens.padding.small
+            visible: root.isVideo
+            text: "movie"
+            color: Colours.palette.m3onSurface
+            fontStyle: Tokens.font.icon.medium
         }
     }
 

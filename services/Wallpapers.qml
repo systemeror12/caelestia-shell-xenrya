@@ -14,6 +14,7 @@ Searcher {
     readonly property string currentNamePath: `${Paths.state}/wallpaper/path.txt`
     readonly property list<string> smartArg: GlobalConfig.services.smartScheme ? [] : ["--no-smart"]
     readonly property string fallback: Quickshell.shellPath("assets/wallpaper.webp")
+    readonly property list<string> nameFilters: Images.validWallpaperExtensions.map(ext => `*.${ext}`)
 
     property bool showPreview: false
     readonly property string current: showPreview ? previewPath : actualCurrent
@@ -21,6 +22,37 @@ Searcher {
     property string actualCurrent
     property bool previewColourLock
     property bool pendingPreviewClear
+    property string thumbnailRevision
+
+    function cleanPath(path: string): string {
+        const clean = String(path ?? "").split(/[?#]/)[0];
+        return clean.startsWith("file://") ? clean.slice(7) : clean;
+    }
+
+    function isVideo(path: string): bool {
+        return Images.isValidVideoByName(cleanPath(path));
+    }
+
+    function pathHash(path: string): string {
+        const clean = cleanPath(path);
+        let hash = 5381;
+        for (let i = 0; i < clean.length; i++) {
+            hash = ((hash << 5) + hash + clean.charCodeAt(i)) | 0;
+        }
+        return String(hash >>> 0);
+    }
+
+    function thumbnailPath(path: string): string {
+        return `${Paths.cache}/videothumbs/${pathHash(path)}.jpg`;
+    }
+
+    function displaySource(path: string): string {
+        if (!isVideo(path))
+            return path;
+
+        const revision = thumbnailRevision ? `?v=${thumbnailRevision}` : "";
+        return `file://${thumbnailPath(path)}${revision}`;
+    }
 
     function getCategoryFor(w: FileSystemEntry): string {
         let category = w.parentDir.slice(Paths.wallsdir.length + 1);
@@ -108,7 +140,34 @@ Searcher {
 
         recursive: true
         path: Paths.wallsdir
-        filter: FileSystemModel.Images
+        filter: FileSystemModel.Files
+        nameFilters: root.nameFilters
+    }
+
+    Connections {
+        function onEntriesChanged(): void {
+            if (wallpapers.entries.some(entry => root.isVideo(entry.path)))
+                thumbnailRefreshTimer.restart();
+        }
+
+        target: wallpapers
+    }
+
+    Timer {
+        id: thumbnailRefreshTimer
+
+        interval: 300
+        onTriggered: {
+            if (!extractThumbnailsProc.running)
+                extractThumbnailsProc.running = true;
+        }
+    }
+
+    Process {
+        id: extractThumbnailsProc
+
+        command: ["caelestia", "wallpaper", "--extract-thumbs"]
+        onExited: root.thumbnailRevision = Date.now().toString() // qmllint disable signal-handler-parameters
     }
 
     Process {
