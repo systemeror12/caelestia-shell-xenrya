@@ -8,16 +8,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1789695747,
-        "narHash": "sha256-dQGiVPS6QRdQRy6HWl2658nlV5YztPYq6tLhsFjYODY=",
-        "owner": "AdiAmbassador",
-        "repo": "caelestia-cli-aw",
-        "rev": "088cae7636b59a715a69b52db34cc7ce5aa5492c",
+        "lastModified": 1789800449,
+        "narHash": "sha256-1Apfgc9uKbWDGXXQJwTJ7E5xG2a4sj5h/6MKbWq92fQ=",
+        "owner": "systemeror12",
+        "repo": "caelestia-cli-xenrya",
+        "rev": "9819f9f5b3cf02797253275f49e737ec85e8ca34",
         "type": "github"
       },
       "original": {
-        "owner": "AdiAmbassador",
-        "repo": "caelestia-cli-aw",
+        "owner": "systemeror12",
+        "repo": "caelestia-cli-xenrya",
+        "rev": "9819f9f5b3cf02797253275f49e737ec85e8ca34",
         "type": "github"
       }
     },

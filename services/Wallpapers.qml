@@ -62,7 +62,7 @@ Searcher {
     }
 
     function setRandom(): void {
-        Quickshell.execDetached(["caelestia", "wallpaper", "-r", ...smartArg]);
+        Quickshell.execDetached(["caelestia", "wallpaper", "-r", Paths.wallsdir, ...smartArg]);
     }
 
     function setWallpaper(path: string): void {
@@ -166,7 +166,7 @@ Searcher {
     Process {
         id: extractThumbnailsProc
 
-        command: ["caelestia", "wallpaper", "--extract-thumbs"]
+        command: ["caelestia", "wallpaper", "--extract-thumbs", Paths.wallsdir]
         onExited: root.thumbnailRevision = Date.now().toString() // qmllint disable signal-handler-parameters
     }
 

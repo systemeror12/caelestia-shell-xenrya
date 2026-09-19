@@ -10,7 +10,7 @@
     };
 
     caelestia-cli = {
-      url = "github:AdiAmbassador/caelestia-cli-aw";
+      url = "github:systemeror12/caelestia-cli-xenrya/9819f9f5b3cf02797253275f49e737ec85e8ca34";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.caelestia-shell.follows = "";
     };

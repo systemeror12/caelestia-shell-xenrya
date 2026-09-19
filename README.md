@@ -70,7 +70,7 @@ For home-manager, you can also use Caelestia's Home Manager module (explained in
 
 Dependencies:
 
--   [`caelestia-cli-aw`](https://github.com/AdiAmbassador/caelestia-cli-aw)
+-   [`caelestia-cli-xenrya`](https://github.com/systemeror12/caelestia-cli-xenrya)
 -   [`quickshell-git`](https://git.outfoxxed.me/quickshell/quickshell) - this has to be the git version, not the latest tagged version
 -   `glibc`
 -   `gcc-libs`
