@@ -44,9 +44,9 @@ PageBase {
                 FileDialog {
                     id: browseDialog
 
-                    title: Tr.tr("Select an image")
-                    filterLabel: Tr.tr("Image files")
-                    filters: Images.validImageExtensions
+                    title: Tr.tr("Select a wallpaper")
+                    filterLabel: Tr.tr("Wallpaper files")
+                    filters: Images.validWallpaperExtensions
                     onAccepted: path => {
                         Wallpapers.setWallpaper(path);
                         root.nState.closeSubPage();
@@ -127,7 +127,7 @@ PageBase {
                     opacity: modelData ? 1 : 0
                     enabled: modelData
 
-                    source: String(modelData?.path ?? "")
+                    source: Wallpapers.displaySource(String(modelData?.path ?? ""))
                     text: {
                         if (!modelData)
                             return "";

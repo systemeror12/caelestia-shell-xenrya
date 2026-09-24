@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components
@@ -21,7 +22,17 @@ Item {
 
     readonly property bool showWallpapers: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
     readonly property var currentList: showWallpapers ? wallpaperList.item : appList.item // Can be either ListView or PathView, so can't type properly
+    readonly property string staticLabel: Tr.tr("Static")
+    readonly property string animatedLabel: Tr.tr("Animated")
+    readonly property string refreshLabel: Tr.tr("Refresh")
     property string animState: showWallpapers ? "wallpapers" : "apps"
+    property bool showAnimatedWallpapers: Wallpapers.isVideo(Wallpapers.actualCurrent)
+    property real wallpaperControlsHeight
+
+    function toggleWallpaperType(): void {
+        if (showWallpapers)
+            showAnimatedWallpapers = !showAnimatedWallpapers;
+    }
 
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: parent.bottom
@@ -49,7 +60,7 @@ Item {
 
             PropertyChanges {
                 root.implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, wallpaperList.implicitWidth)
-                root.implicitHeight: root.Tokens.sizes.launcher.wallpaperHeight
+                root.implicitHeight: root.Tokens.sizes.launcher.wallpaperHeight + root.wallpaperControlsHeight
                 wallpaperList.active: true
             }
         }
@@ -100,13 +111,85 @@ Item {
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
 
-        sourceComponent: WallpaperList {
-            objectName: "launcherWallpaperList"
+        sourceComponent: ColumnLayout {
+            id: wallpaperPicker
 
-            search: root.search
-            screenState: root.screenState
-            panels: root.panels
-            content: root.content
+            readonly property int count: listComp.count
+            readonly property var currentItem: listComp.currentItem
+
+            function decrementCurrentIndex(): void {
+                listComp.decrementCurrentIndex();
+            }
+
+            function incrementCurrentIndex(): void {
+                listComp.incrementCurrentIndex();
+            }
+
+            spacing: root.Tokens.spacing.small
+            implicitWidth: Math.max(controls.implicitWidth, listComp.implicitWidth)
+
+            Binding {
+                target: root
+                property: "wallpaperControlsHeight"
+                value: controls.implicitHeight + wallpaperPicker.spacing
+            }
+
+            RowLayout {
+                id: controls
+
+                Layout.alignment: Qt.AlignHCenter
+                spacing: root.Tokens.spacing.small
+
+                IconTextButton {
+                    icon: "image"
+                    text: root.staticLabel
+                    font: root.Tokens.font.body.medium
+                    isRound: true
+                    horizontalPadding: root.Tokens.padding.medium
+                    verticalPadding: root.Tokens.padding.extraSmall
+                    type: root.showAnimatedWallpapers ? IconTextButton.Tonal : IconTextButton.Filled
+                    onClicked: root.showAnimatedWallpapers = false
+                }
+
+                IconTextButton {
+                    icon: "movie"
+                    text: root.animatedLabel
+                    font: root.Tokens.font.body.medium
+                    isRound: true
+                    horizontalPadding: root.Tokens.padding.medium
+                    verticalPadding: root.Tokens.padding.extraSmall
+                    type: root.showAnimatedWallpapers ? IconTextButton.Filled : IconTextButton.Tonal
+                    onClicked: root.showAnimatedWallpapers = true
+                }
+
+                IconTextButton {
+                    icon: "refresh"
+                    text: root.refreshLabel
+                    font: root.Tokens.font.body.medium
+                    isRound: true
+                    horizontalPadding: root.Tokens.padding.medium
+                    verticalPadding: root.Tokens.padding.extraSmall
+                    type: IconTextButton.Tonal
+                    visible: root.showAnimatedWallpapers
+                    disabled: Wallpapers.thumbnailsRefreshing
+                    onClicked: Wallpapers.refreshVideoThumbnails()
+                }
+            }
+
+            WallpaperList {
+                id: listComp
+
+                objectName: "launcherWallpaperList"
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                search: root.search
+                screenState: root.screenState
+                panels: root.panels
+                content: root.content
+                showAnimated: root.showAnimatedWallpapers
+            }
         }
     }
 

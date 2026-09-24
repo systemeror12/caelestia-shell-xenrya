@@ -124,7 +124,7 @@ PageBase {
                     id: wallImg
 
                     anchors.fill: parent
-                    source: Wallpapers.current
+                    source: Wallpapers.displaySource(Wallpapers.current)
                     preventInit: wallIndicatorLoader.opacity > 0
                     fadeOutAnim: Anim.DefaultEffects
                     fadeInAnim: Anim.SlowEffects
@@ -176,6 +176,22 @@ PageBase {
             text: Tr.tr("Display wallpaper")
             checked: Config.background.wallpaperEnabled
             onToggled: GlobalConfig.background.wallpaperEnabled = checked
+        }
+
+        ToggleRow {
+            Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+
+            text: Tr.tr("Pause animated wallpapers on battery")
+            checked: Config.background.animatedWallpaper.pauseOnBattery
+            onToggled: GlobalConfig.background.animatedWallpaper.pauseOnBattery = checked
+        }
+
+        ToggleRow {
+            Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+
+            text: Tr.tr("Pause animated wallpapers behind windows")
+            checked: Config.background.animatedWallpaper.pauseOnWindows
+            onToggled: GlobalConfig.background.animatedWallpaper.pauseOnWindows = checked
         }
 
         ToggleRow {
