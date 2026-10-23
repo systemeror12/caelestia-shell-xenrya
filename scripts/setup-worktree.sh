@@ -2,8 +2,10 @@
 
 set -Eeuo pipefail
 
-# Prepare a linked worktree's private build/ for linting and scripts/test-shell.sh.
-# T3 Code runs this when it creates a worktree for a new thread.
+# Configure a linked worktree's private build/ for linting and scripts/test-shell.sh.
+# T3 Code runs this when it creates a worktree for a new thread. Compiling is
+# left to the first `cmake --build build` or scripts/test-shell.sh run, so
+# worktrees that never need the plugin skip the multi-minute build.
 
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 build_dir="$repo_root/build"
@@ -23,4 +25,3 @@ cmake -S "$repo_root" -B "$build_dir" -G Ninja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
     -DCMAKE_INSTALL_PREFIX="$build_dir/install"
-cmake --build "$build_dir"
