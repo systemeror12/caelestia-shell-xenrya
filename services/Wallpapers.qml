@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Caelestia.Config
 import Caelestia.Models
+import Caelestia.State
 import qs.services
 import qs.utils
 
@@ -21,6 +22,8 @@ Searcher {
     property string actualCurrent
     property bool previewColourLock
     property bool pendingPreviewClear
+    property bool ignoreNextLoad: true
+    property list<string> missingWorkspaceWallpapers
 
     function getCategoryFor(w: FileSystemEntry): string {
         let category = w.parentDir.slice(Paths.wallsdir.length + 1);
@@ -35,7 +38,42 @@ Searcher {
 
     function setWallpaper(path: string): void {
         actualCurrent = path;
+        if (GlobalConfig.background.workspaceWallpapers.enabled)
+            assignToFocusedWorkspace(path);
         Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
+    }
+
+    function forScreen(screen: ShellScreen): string {
+        if (showPreview)
+            return previewPath;
+        if (GlobalConfig.background.workspaceWallpapers.enabled) {
+            const wall = PersistentState.workspaceWallpapers[Hypr.monitorFor(screen)?.activeWorkspace?.name];
+            if (wall && !missingWorkspaceWallpapers.includes(wall))
+                return wall;
+        }
+        return actualCurrent;
+    }
+
+    function assignToFocusedWorkspace(path: string): void {
+        const name = Hypr.focusedMonitor?.activeWorkspace?.name;
+        if (!name)
+            return;
+        const walls = Object.assign({}, PersistentState.workspaceWallpapers);
+        walls[name] = path;
+        PersistentState.workspaceWallpapers = walls;
+    }
+
+    function useFallback(): void {
+        actualCurrent = fallback;
+        previewColourLock = false;
+        ignoreNextLoad = true;
+        Quickshell.execDetached(["caelestia", "wallpaper", "-f", fallback, ...smartArg]);
+    }
+
+    function checkWorkspaceWallpapers(): void {
+        if (!GlobalConfig.background.workspaceWallpapers.enabled)
+            return;
+        missingCheckProc.exec(["sh", "-c", 'for p; do [ -e "$p" ] || printf "%s\\n" "$p"; done', "sh", ...Object.values(PersistentState.workspaceWallpapers)]);
     }
 
     function preview(path: string): void {
@@ -53,6 +91,8 @@ Searcher {
         else
             Colours.showPreview = false;
     }
+
+    Component.onCompleted: checkWorkspaceWallpapers()
 
     onPreviewColourLockChanged: {
         if (!previewColourLock && pendingPreviewClear)
@@ -88,18 +128,50 @@ Searcher {
         printErrors: false
         onFileChanged: reload()
         onLoaded: {
-            let wall = text().trim();
+            const wall = text().trim();
             if (!wall) {
-                wall = root.fallback;
-                Quickshell.execDetached(["caelestia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
+                root.useFallback();
+                return;
             }
+            // The startup load and the result of the shell's own fallback write are not changes (ADR 0001)
+            if (!root.ignoreNextLoad && GlobalConfig.background.workspaceWallpapers.enabled)
+                root.assignToFocusedWorkspace(wall);
+            root.ignoreNextLoad = false;
             root.actualCurrent = wall;
             root.previewColourLock = false;
         }
-        onLoadFailed: {
-            root.actualCurrent = root.fallback;
-            root.previewColourLock = false;
-            Quickshell.execDetached(["caelestia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
+        onLoadFailed: root.useFallback()
+    }
+
+    Connections {
+        function onWorkspaceWallpapersChanged(): void {
+            root.checkWorkspaceWallpapers();
+        }
+
+        target: PersistentState
+    }
+
+    Connections {
+        function onEntriesChanged(): void {
+            root.checkWorkspaceWallpapers();
+        }
+
+        target: wallpapers
+    }
+
+    Connections {
+        function onEnabledChanged(): void {
+            root.checkWorkspaceWallpapers();
+        }
+
+        target: GlobalConfig.background.workspaceWallpapers
+    }
+
+    Process {
+        id: missingCheckProc
+
+        stdout: StdioCollector {
+            onStreamFinished: root.missingWorkspaceWallpapers = text.split("\n").filter(p => p)
         }
     }
 
