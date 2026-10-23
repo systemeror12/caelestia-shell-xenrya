@@ -47,9 +47,7 @@ Variants {
                 anchors.fill: parent
                 active: Config.background.wallpaperEnabled
 
-                sourceComponent: Wallpaper {
-                    screen: win.modelData
-                }
+                sourceComponent: Wallpaper {}
             }
 
             Visualiser {

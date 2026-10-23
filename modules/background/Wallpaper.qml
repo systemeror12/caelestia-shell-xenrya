@@ -1,57 +1,26 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
-import Quickshell.Services.UPower
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components
 import qs.components.filedialog
-import qs.components.images
+import qs.components.widgets
 import qs.services
 import qs.utils
 
 Item {
     id: root
 
-    required property ShellScreen screen
-
-    property string source: Wallpapers.current
-    property Item current
     property bool completed
 
-    readonly property var monitor: Hypr.monitorFor(screen)
-    readonly property bool coveredByWindows: monitor?.activeWorkspace?.toplevels?.values.some(t => !t.lastIpcObject?.floating) ?? false
-    readonly property bool videoPaused: (Config.background.animatedWallpaper.pauseOnBattery && UPower.onBattery) || (Config.background.animatedWallpaper.pauseOnWindows && coveredByWindows)
-
-    function createWallpaper(): void {
-        if (!source) {
-            current?.destroy();
-            current = null;
-            return;
-        }
-
-        const component = Wallpapers.isVideo(source) ? videoComp : imgComp;
-        current = component.createObject(root, {
-            path: source
-        });
-    }
-
-    onSourceChanged: {
-        if (completed)
-            createWallpaper();
-    }
-
-    Component.onCompleted: {
-        completed = true;
-        createWallpaper();
-    }
+    Component.onCompleted: completed = true
 
     Loader {
         asynchronous: true
         anchors.fill: parent
 
-        active: root.completed && !root.source
+        active: root.completed && !impl.source
 
         sourceComponent: StyledRect {
             color: Colours.palette.m3surfaceContainer
@@ -87,8 +56,8 @@ Item {
                             id: dialog
 
                             title: Tr.tr("Select a wallpaper")
-                            filterLabel: Tr.tr("Wallpaper files")
-                            filters: Images.validWallpaperExtensions
+                            filterLabel: Tr.tr("Image files")
+                            filters: Images.validImageExtensions
                             onAccepted: path => Wallpapers.setWallpaper(path)
                         }
 
@@ -113,69 +82,9 @@ Item {
         }
     }
 
-    Component {
-        id: imgComp
+    WallpaperImpl {
+        id: impl
 
-        CachingImage {
-            id: img
-
-            readonly property bool ready: status === Image.Ready
-
-            anchors.fill: parent
-
-            opacity: 0
-
-            onStatusChanged: {
-                if (status === Image.Ready)
-                    anim.start();
-            }
-
-            Anim on opacity {
-                id: anim
-
-                type: Anim.SlowEffects
-                running: false
-                from: 0
-                to: 1
-            }
-
-            Timer {
-                running: root.current !== img && root.current?.opacity === 1
-                interval: anim.duration
-                onTriggered: img.destroy()
-            }
-        }
-    }
-
-    Component {
-        id: videoComp
-
-        VideoWallpaper {
-            id: video
-
-            anchors.fill: parent
-            paused: root.videoPaused
-            opacity: 0
-
-            onReadyChanged: {
-                if (ready)
-                    anim.start();
-            }
-
-            Anim on opacity {
-                id: anim
-
-                type: Anim.SlowEffects
-                running: false
-                from: 0
-                to: 1
-            }
-
-            Timer {
-                running: root.current !== video && root.current?.opacity === 1
-                interval: anim.duration
-                onTriggered: video.destroy()
-            }
-        }
+        anchors.fill: parent
     }
 }

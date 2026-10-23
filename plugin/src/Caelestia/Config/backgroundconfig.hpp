@@ -4,6 +4,7 @@
 
 #include "settings/objectnode.hpp"
 #include "common.hpp"
+#include "enums.hpp"
 
 namespace caelestia::config {
 
@@ -46,19 +47,12 @@ class BackgroundVisualiser : public settings::ObjectNode {
     CONFIG_PROPERTY(qreal, spacing, 1)
 };
 
-class AnimatedWallpaper : public settings::ObjectNode {
-    CONFIG_NODE(AnimatedWallpaper, settings::ObjectNode)
-
-    CONFIG_PROPERTY(bool, pauseOnBattery, false)
-    CONFIG_PROPERTY(bool, pauseOnWindows, true)
-};
-
 class BackgroundConfig : public settings::ObjectNode {
     CONFIG_NODE(BackgroundConfig, settings::ObjectNode)
 
     CONFIG_PROPERTY(bool, enabled, true)
     CONFIG_PROPERTY(bool, wallpaperEnabled, true)
-    CONFIG_SUBOBJECT(AnimatedWallpaper, animatedWallpaper)
+    CONFIG_ENUM_PROPERTY(WallpaperTransition, wallpaperTransition, WallpaperTransition::Crossfade)
     CONFIG_SUBOBJECT(DesktopClock, desktopClock)
     CONFIG_SUBOBJECT(BackgroundVisualiser, visualiser)
 };

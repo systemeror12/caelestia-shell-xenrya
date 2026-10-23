@@ -4,8 +4,9 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell.Wayland
 import Caelestia.Config
+import Caelestia.Multimedia
+import Caelestia.State
 import qs.components
-import qs.components.images
 import qs.services
 
 WlSessionLockSurface {
@@ -187,27 +188,9 @@ WlSessionLockSurface {
     Component {
         id: wallpaperBackground
 
-        Loader {
-            anchors.fill: parent
-            sourceComponent: Wallpapers.isVideo(Wallpapers.current) ? videoWallpaperBackground : staticWallpaperBackground
-        }
-    }
-
-    Component {
-        id: staticWallpaperBackground
-
-        CachingImage {
-            path: Wallpapers.current
-        }
-    }
-
-    Component {
-        id: videoWallpaperBackground
-
-        Image {
-            asynchronous: true
-            fillMode: Image.PreserveAspectCrop
-            source: Wallpapers.displaySource(Wallpapers.current)
+        Visual {
+            source: Wallpapers.current
+            playing: PersistentState.wallpaperPlaying
         }
     }
 
