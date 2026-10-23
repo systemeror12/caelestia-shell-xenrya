@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype · Workspace wallpapers toggle</title>
+<style>
+@font-face {
+    font-family: "Google Sans Flex";
+    src: url("../../assets/google-sans-flex/GoogleSansFlex-VariableFont_GRAD%2CROND%2Copsz%2Cslnt%2Cwdth%2Cwght.ttf") format("truetype");
+    font-weight: 100 1000;
+}
+
+/* onedark scheme, as Nexus renders it with transparency on */
+:root {
+    --pane: #0f1014;          /* m3surface */
+    --row: #191b1f;           /* m3surfaceContainer */
+    --on-surface: #e3e2e7;
+    --on-surface-variant: #c3c6d0;
+    --outline: #8d919a;
+    --primary: #a8c8ff;
+    --on-primary: #05305f;
+    --track-off: #333538;     /* m3surfaceContainerHighest */
+    --tonal: #3c475b;         /* m3secondaryContainer */
+    --on-tonal: #aab5cd;      /* m3onSecondaryContainer */
+    --btn-disabled: #242529;
+    --on-btn-disabled: #6c6d71;
+    --anim: 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    background: var(--pane);
+    color: var(--on-surface);
+    font-family: "Google Sans Flex", sans-serif;
+}
+
+body { padding: 48px 24px; }
+
+.icon {
+    font-family: "Material Symbols Rounded";
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+}
+
+.page {
+    max-width: 716px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+h1 {
+    margin: 0 0 16px;
+    font-size: 29px;
+    font-weight: 500;
+}
+
+.preview {
+    align-self: center;
+    width: 71%;
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    background: var(--row);
+    position: relative;
+    overflow: hidden;
+}
+
+.preview .art,
+.preview .off {
+    position: absolute;
+    inset: 0;
+    transition: opacity 400ms ease;
+}
+
+.preview .art {
+    background:
+        radial-gradient(circle at 24% 70%, #7292c6 0 18%, transparent 19%),
+        radial-gradient(circle at 70% 32%, #a8c8ff 0 12%, transparent 13%),
+        radial-gradient(circle at 82% 78%, #3c475b 0 22%, transparent 23%),
+        linear-gradient(135deg, #1b2a44 0%, #2d3f63 45%, #5d7bb0 100%);
+}
+
+.preview .off {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--on-surface-variant);
+    font-size: 21px;
+    opacity: 0;
+}
+
+.preview .off .icon { font-size: 48px; }
+
+.display-off .preview .art { opacity: 0; }
+.display-off .preview .off { opacity: 1; }
+
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--tonal);
+    color: var(--on-tonal);
+    font: inherit;
+    font-size: 21px;
+    cursor: pointer;
+    transition: background var(--anim), color var(--anim);
+}
+
+.btn .icon { font-size: 24px; }
+
+.btn:disabled {
+    background: var(--btn-disabled);
+    color: var(--on-btn-disabled);
+    cursor: default;
+}
+
+.group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 54px;
+    padding: 12px 20px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--row);
+    color: var(--on-surface);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.row.first { border-top-left-radius: 28px; border-top-right-radius: 28px; }
+.row.last { border-bottom-left-radius: 28px; border-bottom-right-radius: 28px; }
+
+.row .text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.row .label,
+.row .sub {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.row .label { font-size: 16px; }
+
+.row .sub {
+    font-size: 14.7px;
+    color: var(--outline);
+}
+
+.btn:focus-visible,
+.row:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* StyledSwitch: 51 x 30 track, 26 px thumb, check / cross drawn in the thumb */
+.switch {
+    flex: none;
+    position: relative;
+    width: 51px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--track-off);
+    transition: background var(--anim);
+}
+
+.switch .thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: var(--outline);
+    display: grid;
+    place-items: center;
+    transition: left var(--anim), background var(--anim);
+}
+
+.switch svg {
+    width: 14px;
+    height: 14px;
+    stroke: var(--track-off);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    transition: stroke var(--anim);
+}
+
+.switch .check { display: none; }
+
+.row[aria-checked="true"] .switch { background: var(--primary); }
+.row[aria-checked="true"] .thumb { left: 23px; background: var(--on-primary); }
+.row[aria-checked="true"] svg { stroke: var(--primary); }
+.row[aria-checked="true"] .check { display: inline; }
+.row[aria-checked="true"] .cross { display: none; }
+
+@media (max-width: 480px) {
+    body { padding: 28px 16px; }
+    .preview { width: 100%; }
+    .btn { font-size: 18px; padding: 10px 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+</style>
+</head>
+<body>
+<main class="page" id="page">
+    <h1>Wallpaper &amp; style</h1>
+
+    <div class="preview" aria-hidden="true">
+        <div class="art"></div>
+        <div class="off">
+            <span class="icon">hide_image</span>
+            <span>Wallpaper disabled</span>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button class="btn" id="wallpapers" type="button"><span class="icon" aria-hidden="true">wallpaper</span>Wallpapers</button>
+        <button class="btn" type="button"><span class="icon" aria-hidden="true">palette</span>Colours</button>
+    </div>
+
+    <div class="group" id="group"></div>
+</main>
+
+<script>
+// Optional state for screenshots: ?display=off&workspace=on
+const params = new URLSearchParams(location.search);
+
+const state = {
+    display: params.get("display") !== "off",
+    workspace: params.get("workspace") === "on", // off by default (S1)
+    transparency: true,
+    dark: true,
+};
+
+const rows = [
+    { id: "display", label: "Display wallpaper" },
+    { id: "workspace", label: "Workspace wallpapers", subtext: "Remember the wallpaper set on each workspace" },
+    { id: "transparency", label: "Transparency", subtext: "Base 0.85, layers 0.4" },
+    { id: "dark", label: "Dark theme" },
+];
+
+const switchSvg =
+    '<span class="switch"><span class="thumb"><svg viewBox="0 0 14 14" aria-hidden="true">' +
+    '<path class="check" d="M2.8 7.2 5.6 9.8 11.2 3.6"/>' +
+    '<path class="cross" d="M3 3l8 8M11 3l-8 8"/></svg></span></span>';
+
+const group = document.getElementById("group");
+
+rows.forEach(({ id, label, subtext }, i) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "row" + (i === 0 ? " first" : "") + (i === rows.length - 1 ? " last" : "");
+    row.setAttribute("role", "switch");
+    row.dataset.id = id;
+
+    const sub = subtext ? `<span class="sub">${subtext}</span>` : "";
+    row.innerHTML = `<span class="text"><span class="label">${label}</span>${sub}</span>${switchSvg}`;
+
+    row.addEventListener("click", () => {
+        state[id] = !state[id];
+        update();
+    });
+
+    group.append(row);
+});
+
+function update() {
+    document.getElementById("page").classList.toggle("display-off", !state.display);
+    document.getElementById("wallpapers").disabled = !state.display;
+
+    for (const row of group.children)
+        row.setAttribute("aria-checked", String(state[row.dataset.id]));
+}
+
+update();
+</script>
+</body>
+</html>
