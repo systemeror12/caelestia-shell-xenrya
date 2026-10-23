@@ -74,3 +74,17 @@ Read only the sources that apply to the task.
 - Apply `$unslop-response` to every user-facing response.
 
 ## Taste
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in the Plane project `CAELESTIAS` (`xenrya-personal-projects`), reached through its REST API with the key exported in `~/.bashrc`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default labels, created as Plane project labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
