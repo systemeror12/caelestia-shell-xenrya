@@ -22,8 +22,7 @@ Searcher {
     property string actualCurrent
     property bool previewColourLock
     property bool pendingPreviewClear
-    property bool loaded
-    property bool fallbackWritePending
+    property bool ignoreNextLoad: true
     property list<string> missingWorkspaceWallpapers
 
     function getCategoryFor(w: FileSystemEntry): string {
@@ -39,7 +38,6 @@ Searcher {
 
     function setWallpaper(path: string): void {
         actualCurrent = path;
-        fallbackWritePending = false;
         Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
     }
 
@@ -66,12 +64,13 @@ Searcher {
     function useFallback(): void {
         actualCurrent = fallback;
         previewColourLock = false;
-        loaded = true;
-        fallbackWritePending = true;
+        ignoreNextLoad = true;
         Quickshell.execDetached(["caelestia", "wallpaper", "-f", fallback, ...smartArg]);
     }
 
     function checkWorkspaceWallpapers(): void {
+        if (!GlobalConfig.background.workspaceWallpapers.enabled)
+            return;
         missingCheckProc.exec(["sh", "-c", 'for p; do [ -e "$p" ] || printf "%s\\n" "$p"; done', "sh", ...Object.values(PersistentState.workspaceWallpapers)]);
     }
 
@@ -132,12 +131,10 @@ Searcher {
                 root.useFallback();
                 return;
             }
-            // The first load and the result of the shell's own fallback write are not changes (ADR 0001)
-            const ownFallback = root.fallbackWritePending && wall === root.fallback;
-            if (root.loaded && !ownFallback && GlobalConfig.background.workspaceWallpapers.enabled)
+            // The startup load and the result of the shell's own fallback write are not changes (ADR 0001)
+            if (!root.ignoreNextLoad && GlobalConfig.background.workspaceWallpapers.enabled)
                 root.assignToFocusedWorkspace(wall);
-            root.loaded = true;
-            root.fallbackWritePending = false;
+            root.ignoreNextLoad = false;
             root.actualCurrent = wall;
             root.previewColourLock = false;
         }
@@ -161,12 +158,11 @@ Searcher {
     }
 
     Connections {
-        function onFocusedWorkspaceChanged(): void {
+        function onEnabledChanged(): void {
             root.checkWorkspaceWallpapers();
         }
 
-        target: Hypr
-        enabled: GlobalConfig.background.workspaceWallpapers.enabled
+        target: GlobalConfig.background.workspaceWallpapers
     }
 
     Process {
