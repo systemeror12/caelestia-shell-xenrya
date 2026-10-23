@@ -1,17 +1,20 @@
 # Isolated Quickshell testing
 
-Checked 2026-09-17 with Quickshell 0.3.1. The repository now has one supported
-local runtime check:
+Checked 2026-09-17 with Quickshell 0.3.1. The default smoke test moved from
+headless Sway to Hyprland inside headless labwc on 2026-10-23, checked with
+Quickshell 0.3.2, Hyprland 0.56.2, and labwc 0.20.2. The repository has one
+supported local runtime check:
 
 ```sh
 scripts/test-shell.sh
 ```
 
-It builds the checkout, starts an isolated compositor, gives the test its own
+It builds the checkout, starts an isolated Hyprland, gives the test its own
 XDG config/data/state/cache/runtime directories, denies access to the user and
-system D-Bus sockets, launches the checkout by absolute path, and stops both
-processes by PID. The default smoke test uses headless Sway. Interactive mode
-uses nested Hyprland for the protocols the shell expects. Both modes were
+system D-Bus sockets, launches the checkout by absolute path, and stops every
+process by PID. Both modes run the shell on Hyprland. The default smoke test
+hosts Hyprland inside headless labwc, so nothing appears on the desktop.
+Interactive mode hosts it as a window on the live desktop. Both modes were
 validated while the installed Caelestia shell remained on its original PID.
 
 For a visible, interactive preview similar to a headed browser test:
@@ -39,11 +42,14 @@ scripts/test-shell.sh --duration 15
 scripts/test-shell.sh --screenshot /tmp/caelestia-test.png
 ```
 
-The required runtime tools are `qs` plus `sway` for headless mode or `Hyprland`
-for interactive mode. Screenshots also require `grim`. On Arch Linux, Sway is
-available as the `sway` package. The script makes a temporary copy of the Sway
-executable so Arch's `cap_sys_nice` file capability is not inherited inside
-development harnesses that reject capability-bearing child processes.
+The required runtime tools are `qs` and `Hyprland`, plus `labwc` and `hyprctl`
+for headless mode. Screenshots also require `grim`. On Arch Linux, labwc is
+available as the `labwc` package.
+
+Headless mode renders on the first `/dev/dri/renderD*` node. Set
+`WLR_RENDER_DRM_DEVICE` to choose another. Left to choose, wlroots picked the
+NVIDIA node on a machine with AMD and NVIDIA GPUs, and `grim` then failed with
+`failed to create buffer`.
 
 ## Why a separate compositor is required
 
@@ -78,14 +84,32 @@ An offscreen launch is not a valid full-shell smoke test. A local attempt with
 [`.github/workflows/lint.yml`](../../.github/workflows/lint.yml) remains useful
 for QML tooling setup, but it should not be treated as runtime acceptance.
 
-Headless Sway supplies a real Wayland and layer-shell implementation for the
-fast smoke test. This matches the existing headless Sway check in
-[`.github/workflows/update-flake-inputs.yml`](../../.github/workflows/update-flake-inputs.yml).
-Interactive mode uses nested Hyprland so Quickshell also receives native
-Hyprland IPC, workspace, session-lock, and global-shortcut protocols. Only the
-nested compositor's host window is placed on the live compositor. The test
-script discovers each private Wayland and IPC socket instead of assuming a
-socket or instance name.
+Both modes run Hyprland so Quickshell receives native Hyprland IPC, workspace,
+session-lock, and global-shortcut protocols. The test script discovers each
+private Wayland and IPC socket instead of assuming a socket or instance name.
+
+Hyprland cannot run headless on its own. Its Aquamarine backend needs a GPU
+from either a login seat or a parent Wayland compositor. The headless backend
+supplies neither, so startup fails with "no allocator available". Hyprland's own
+test suite sidesteps this by running inside a NixOS QEMU VM with virtio-gpu.
+Taking a seat from inside the live session is not an option, so the test needs
+a parent compositor that draws nothing on screen.
+
+Headless Sway cannot be that parent. Aquamarine binds `xdg_wm_base` version 6,
+and Sway 1.12 offers version 5, so nested Hyprland exits with
+`invalid version for global xdg_wm_base`. Cage and Weston also offer version 5.
+labwc offers version 6 and uses the same wlroots headless backend as Sway. The
+script gives labwc its own runtime directory, an empty config directory, and
+`LABWC_UPDATE_ACTIVATION_ENV=false`. Quickshell never connects to labwc.
+
+Aquamarine announces the nested window as a monitor only after the parent
+compositor sends another event, and idle headless labwc never does. The script
+therefore runs `hyprctl output create headless` against the private instance, and
+the shell draws on that Hyprland-owned monitor. labwc only supplies the GPU.
+
+The upstream flake update check in
+[`.github/workflows/update-flake-inputs.yml`](../../.github/workflows/update-flake-inputs.yml)
+still uses headless Sway, on GitHub runners without a GPU.
 
 The script intentionally provides unreachable D-Bus addresses instead of using
 `dbus-run-session`. During local validation, a private bus auto-activated desktop
@@ -113,10 +137,13 @@ visual state.
 This is process, user-state, D-Bus, and compositor isolation. It is not a virtual
 machine.
 
-- Headless Sway does not provide Hyprland IPC, workspace dispatch,
-  Hyprland-specific session-lock behavior, or
-  `hyprland_global_shortcuts_v1`. Use interactive mode when those affect the
-  feature under test.
+- Both modes load the minimal
+  [`scripts/hyprland-test.lua`](../../scripts/hyprland-test.lua), not the
+  user's Hyprland config.
+- Headless mode has no input devices. Drive it with `hyprctl dispatch` against
+  the private instance, using Lua dispatcher syntax such as
+  `hl.dsp.focus({ workspace = "3" })`. Use interactive mode for pointer and
+  keyboard checks.
 - Nested Hyprland has empty workspaces and no host applications. The sidebar
   structure renders, but live workspace icons, active windows, and tray clients
   are not copied into it.
