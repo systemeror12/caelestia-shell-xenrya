@@ -38,6 +38,8 @@ Searcher {
 
     function setWallpaper(path: string): void {
         actualCurrent = path;
+        if (GlobalConfig.background.workspaceWallpapers.enabled)
+            assignToFocusedWorkspace(path);
         Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
     }
 

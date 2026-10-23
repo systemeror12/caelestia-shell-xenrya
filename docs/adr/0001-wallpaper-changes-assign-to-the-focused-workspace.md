@@ -13,3 +13,10 @@ startup or while running. Neither assigns. The shell cannot tell a hand-typed CL
 that treated them differently would make the terminal behave unlike the
 launcher. Users with random-wallpaper timers who do not want their workspaces
 assigned can leave the feature off.
+
+A wallpaper set from inside the shell (the launcher, Nexus, and `wallpaper set`
+over IPC, which all go through `setWallpaper`) is also assigned to the focused
+workspace when it is set, before the CLI writes `path.txt`. Otherwise the
+background would fall back to that workspace's old wallpaper until the write
+lands. The cost: if focus moves between the pick and the write, both workspaces
+get the wallpaper.
