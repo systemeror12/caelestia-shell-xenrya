@@ -15,6 +15,9 @@ PathView {
     required property var panels
     required property var content
 
+    // Taken once when the list opens, before it starts a preview: forScreen returns the preview while one shows
+    property string screenWallpaper
+
     readonly property int itemWidth: Tokens.sizes.launcher.wallpaperWidth * 0.8 + Tokens.padding.medium * 2
 
     readonly property int numItems: {
@@ -50,10 +53,13 @@ PathView {
         readonly property string search: root.search.text.split(" ").slice(1).join(" ")
 
         values: Wallpapers.query(search)
-        onValuesChanged: root.currentIndex = search ? 0 : values.findIndex(w => w.path === Wallpapers.actualCurrent)
+        onValuesChanged: root.currentIndex = search ? 0 : values.findIndex(w => w.path === root.screenWallpaper)
     }
 
-    Component.onCompleted: currentIndex = Wallpapers.list.findIndex(w => w.path === Wallpapers.actualCurrent)
+    Component.onCompleted: {
+        screenWallpaper = Wallpapers.forScreen((QsWindow.window as QsWindow)?.screen);
+        currentIndex = Wallpapers.list.findIndex(w => w.path === screenWallpaper);
+    }
     Component.onDestruction: Wallpapers.stopPreview()
 
     onCurrentItemChanged: {
