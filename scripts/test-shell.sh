@@ -6,9 +6,9 @@ usage() {
     printf '%s\n' \
         "Usage: scripts/test-shell.sh [--interactive] [--duration SECONDS] [--screenshot FILE] [--skip-build]" \
         "" \
-        "Build and test this checkout in an isolated compositor session." \
-        "The default smoke test uses headless Sway." \
-        "Use --interactive to open a nested Hyprland window with copied shell state." \
+        "Build and test this checkout in an isolated Hyprland session." \
+        "The default smoke test runs Hyprland inside headless labwc." \
+        "Use --interactive to open the nested Hyprland as a window on the live desktop." \
         "The test never connects Quickshell itself to the live Wayland compositor."
 }
 
@@ -62,11 +62,9 @@ if [[ ! $duration =~ ^[1-9][0-9]*$ ]]; then
     exit 64
 fi
 
-required_commands=(cmake cp find qs)
-if ((interactive == 1)); then
-    required_commands+=(Hyprland)
-else
-    required_commands+=(sway)
+required_commands=(cmake cp find qs Hyprland)
+if ((interactive == 0)); then
+    required_commands+=(hyprctl labwc)
 fi
 for command_name in "${required_commands[@]}"; do
     if ! command -v "$command_name" >/dev/null; then
@@ -100,6 +98,7 @@ host_state_dir=${XDG_STATE_HOME:-$host_home/.local/state}
 
 # Keep this path short enough for Hyprland's Unix-domain IPC socket limit.
 test_root=$(mktemp -d -t cqs.XXXXXX)
+host_pid=
 compositor_pid=
 shell_pid=
 
@@ -111,6 +110,10 @@ cleanup() {
     if [[ -n $compositor_pid ]]; then
         kill "$compositor_pid" 2>/dev/null || true
         wait "$compositor_pid" 2>/dev/null || true
+    fi
+    if [[ -n $host_pid ]]; then
+        kill "$host_pid" 2>/dev/null || true
+        wait "$host_pid" 2>/dev/null || true
     fi
     find "$test_root" -depth -delete 2>/dev/null || true
 }
@@ -126,6 +129,7 @@ state_dir="$test_root/state"
 cache_dir="$test_root/cache"
 home_dir="$test_root/home"
 blocked_bin_dir="$test_root/blocked-bin"
+host_log="$test_root/labwc.log"
 compositor_log="$test_root/compositor.log"
 shell_log="$test_root/quickshell.log"
 
@@ -145,7 +149,7 @@ if [[ -d $host_config_dir/caelestia ]]; then
     cp -a -- "$host_config_dir/caelestia" "$config_dir/"
 fi
 mkdir -p "$state_dir/caelestia"
-for state_name in wallpaper scheme.json apps.sqlite sequences.txt; do
+for state_name in wallpaper state.json scheme.json apps.sqlite sequences.txt; do
     if [[ -e $host_state_dir/caelestia/$state_name || -L $host_state_dir/caelestia/$state_name ]]; then
         cp -a -- "$host_state_dir/caelestia/$state_name" "$state_dir/caelestia/"
     fi
@@ -197,50 +201,67 @@ if ((interactive == 1)); then
         printf 'Live Wayland socket not found: %s\n' "$host_wayland_socket" >&2
         exit 69
     fi
-
-    host_wayland_display=host-wayland
-    ln -s -- "$host_wayland_socket" "$runtime_dir/$host_wayland_display"
-
-    env -u DISPLAY -u HYPRLAND_INSTANCE_SIGNATURE -u SWAYSOCK -u I3SOCK \
-        HOME="$home_dir" \
-        XDG_RUNTIME_DIR="$runtime_dir" \
-        XDG_CONFIG_HOME="$config_dir" \
-        XDG_DATA_HOME="$data_dir" \
-        XDG_STATE_HOME="$state_dir" \
-        XDG_CACHE_HOME="$cache_dir" \
-        DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/no-session-bus" \
-        DBUS_SYSTEM_BUS_ADDRESS="unix:path=$runtime_dir/no-system-bus" \
-        XDG_CURRENT_DESKTOP=Hyprland \
-        WAYLAND_DISPLAY="$host_wayland_display" \
-        HYPRLAND_NO_SD_VARS=1 \
-        PATH="$blocked_bin_dir:$PATH" \
-        Hyprland --config "$repo_root/scripts/hyprland-test.lua" >"$compositor_log" 2>&1 &
-    compositor_name=Hyprland
 else
-    sway_command="$test_root/sway"
-    sway_config=$(mktemp "$test_root/sway.XXXXXX.conf")
+    # Without a seat, Hyprland gets its GPU from a parent compositor, and it needs
+    # xdg_wm_base v6, which Sway does not offer. Headless labwc is only that parent.
+    host_runtime_dir="$test_root/labwc-runtime"
+    labwc_config_dir="$test_root/labwc-config"
+    mkdir -p "$host_runtime_dir" "$labwc_config_dir"
+    chmod 700 "$host_runtime_dir"
 
-    # Arch grants /usr/bin/sway cap_sys_nice. Some development harnesses reject
-    # capability-bearing children, so run an unmodified private copy without xattrs.
-    cp -- "$(command -v sway)" "$sway_command"
+    # Left to choose, wlroots can pick a discrete NVIDIA GPU, where grim cannot
+    # capture Hyprland. Use the first render node unless the caller picks one.
+    render_node=${WLR_RENDER_DRM_DEVICE:-$(find /dev/dri -maxdepth 1 -name 'renderD*' -print | sort | head -n 1)}
 
     env -u WAYLAND_DISPLAY -u DISPLAY -u HYPRLAND_INSTANCE_SIGNATURE -u SWAYSOCK -u I3SOCK \
         HOME="$home_dir" \
-        XDG_RUNTIME_DIR="$runtime_dir" \
+        XDG_RUNTIME_DIR="$host_runtime_dir" \
         XDG_CONFIG_HOME="$config_dir" \
         XDG_DATA_HOME="$data_dir" \
         XDG_STATE_HOME="$state_dir" \
         XDG_CACHE_HOME="$cache_dir" \
         DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/no-session-bus" \
         DBUS_SYSTEM_BUS_ADDRESS="unix:path=$runtime_dir/no-system-bus" \
-        XDG_CURRENT_DESKTOP=sway \
+        LABWC_UPDATE_ACTIVATION_ENV=false \
         WLR_BACKENDS=headless \
-        WLR_HEADLESS_OUTPUTS=1 \
-        WLR_LIBINPUT_NO_DEVICES=1 \
-        WLR_RENDERER=pixman \
-        "$sway_command" -c "$sway_config" >"$compositor_log" 2>&1 &
-    compositor_name=Sway
+        WLR_RENDERER=gles2 \
+        WLR_RENDER_DRM_DEVICE="$render_node" \
+        PATH="$blocked_bin_dir:$PATH" \
+        labwc --config-dir "$labwc_config_dir" >"$host_log" 2>&1 &
+    host_pid=$!
+
+    host_wayland_socket=
+    for _ in $(seq 1 50); do
+        host_wayland_socket=$(find "$host_runtime_dir" -maxdepth 1 -type s -name 'wayland-*' -print -quit)
+        if [[ -n $host_wayland_socket ]] || ! kill -0 "$host_pid" 2>/dev/null; then
+            break
+        fi
+        sleep 0.1
+    done
+    if [[ -z $host_wayland_socket ]]; then
+        printf 'labwc did not create a Wayland socket.\n' >&2
+        sed -n '1,240p' "$host_log" >&2
+        exit 70
+    fi
 fi
+
+host_wayland_display=host-wayland
+ln -s -- "$host_wayland_socket" "$runtime_dir/$host_wayland_display"
+
+env -u DISPLAY -u HYPRLAND_INSTANCE_SIGNATURE -u SWAYSOCK -u I3SOCK \
+    HOME="$home_dir" \
+    XDG_RUNTIME_DIR="$runtime_dir" \
+    XDG_CONFIG_HOME="$config_dir" \
+    XDG_DATA_HOME="$data_dir" \
+    XDG_STATE_HOME="$state_dir" \
+    XDG_CACHE_HOME="$cache_dir" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/no-session-bus" \
+    DBUS_SYSTEM_BUS_ADDRESS="unix:path=$runtime_dir/no-system-bus" \
+    XDG_CURRENT_DESKTOP=Hyprland \
+    WAYLAND_DISPLAY="$host_wayland_display" \
+    HYPRLAND_NO_SD_VARS=1 \
+    PATH="$blocked_bin_dir:$PATH" \
+    Hyprland --config "$repo_root/scripts/hyprland-test.lua" >"$compositor_log" 2>&1 &
 compositor_pid=$!
 
 wayland_display=
@@ -248,15 +269,13 @@ hyprland_signature=
 hyprland_ipc_ready=0
 for _ in $(seq 1 50); do
     wayland_display=$(find "$runtime_dir" -maxdepth 1 -type s -name 'wayland-*' -printf '%f\n' -quit)
-    if ((interactive == 1)); then
-        hyprland_signature=$(find "$runtime_dir/hypr" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' -quit 2>/dev/null || true)
-        if [[ -n $hyprland_signature \
-            && -S $runtime_dir/hypr/$hyprland_signature/.socket.sock \
-            && -S $runtime_dir/hypr/$hyprland_signature/.socket2.sock ]]; then
-            hyprland_ipc_ready=1
-        fi
+    hyprland_signature=$(find "$runtime_dir/hypr" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' -quit 2>/dev/null || true)
+    if [[ -n $hyprland_signature \
+        && -S $runtime_dir/hypr/$hyprland_signature/.socket.sock \
+        && -S $runtime_dir/hypr/$hyprland_signature/.socket2.sock ]]; then
+        hyprland_ipc_ready=1
     fi
-    if [[ -n $wayland_display && ( $interactive == 0 || $hyprland_ipc_ready == 1 ) ]]; then
+    if [[ -n $wayland_display && $hyprland_ipc_ready == 1 ]]; then
         break
     fi
     if ! kill -0 "$compositor_pid" 2>/dev/null; then
@@ -266,14 +285,37 @@ for _ in $(seq 1 50); do
 done
 
 if [[ -z $wayland_display ]]; then
-    printf '%s did not create a Wayland socket.\n' "$compositor_name" >&2
+    printf 'Hyprland did not create a Wayland socket.\n' >&2
     sed -n '1,240p' "$compositor_log" >&2
     exit 70
 fi
-if ((interactive == 1 && hyprland_ipc_ready == 0)); then
+if ((hyprland_ipc_ready == 0)); then
     printf 'Hyprland did not create usable isolated IPC sockets.\n' >&2
     sed -n '1,240p' "$compositor_log" >&2
     exit 70
+fi
+
+isolated_hyprctl() {
+    env XDG_RUNTIME_DIR="$runtime_dir" HYPRLAND_INSTANCE_SIGNATURE="$hyprland_signature" hyprctl "$@"
+}
+
+if ((interactive == 0)); then
+    # Aquamarine announces the nested window as a monitor only after the parent
+    # compositor sends another event, and idle headless labwc never does.
+    isolated_hyprctl output create headless >/dev/null
+    monitor_ready=0
+    for _ in $(seq 1 50); do
+        if [[ $(isolated_hyprctl -j monitors) == *'"name"'* ]]; then
+            monitor_ready=1
+            break
+        fi
+        sleep 0.1
+    done
+    if ((monitor_ready == 0)); then
+        printf 'Hyprland did not add its headless monitor.\n' >&2
+        sed -n '1,240p' "$compositor_log" >&2
+        exit 70
+    fi
 fi
 
 qml_import_path="$build_dir/qml${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
@@ -288,28 +330,16 @@ shell_environment=(
     "DBUS_SESSION_BUS_ADDRESS=unix:path=$runtime_dir/no-session-bus"
     "DBUS_SYSTEM_BUS_ADDRESS=unix:path=$runtime_dir/no-system-bus"
     "WAYLAND_DISPLAY=$wayland_display"
+    "XDG_CURRENT_DESKTOP=Hyprland"
+    "HYPRLAND_INSTANCE_SIGNATURE=$hyprland_signature"
     "PATH=$blocked_bin_dir:$PATH"
     "QML2_IMPORT_PATH=$qml_import_path"
     "CAELESTIA_LIB_DIR=$build_dir/lib"
     "QS_NO_RELOAD_POPUP=1"
 )
-if ((interactive == 1)); then
-    shell_environment+=(
-        "XDG_CURRENT_DESKTOP=Hyprland"
-        "HYPRLAND_INSTANCE_SIGNATURE=$hyprland_signature"
-    )
-    env -u DISPLAY -u SWAYSOCK -u I3SOCK \
-        "${shell_environment[@]}" \
-        qs --no-color --no-duplicate -p "$repo_root" >"$shell_log" 2>&1 &
-else
-    shell_environment+=(
-        "XDG_CURRENT_DESKTOP=sway"
-        "QT_QUICK_BACKEND=software"
-    )
-    env -u DISPLAY -u HYPRLAND_INSTANCE_SIGNATURE -u SWAYSOCK -u I3SOCK \
-        "${shell_environment[@]}" \
-        qs --no-color --no-duplicate -p "$repo_root" >"$shell_log" 2>&1 &
-fi
+env -u DISPLAY -u SWAYSOCK -u I3SOCK \
+    "${shell_environment[@]}" \
+    qs --no-color --no-duplicate -p "$repo_root" >"$shell_log" 2>&1 &
 shell_pid=$!
 
 for _ in $(seq 1 "$((duration * 10))"); do
@@ -321,7 +351,7 @@ for _ in $(seq 1 "$((duration * 10))"); do
         shell_pid=
         printf 'Quickshell exited during the smoke-test window with status %s.\n' "$shell_status" >&2
         if ! kill -0 "$compositor_pid" 2>/dev/null; then
-            printf '%s also exited. Its log follows.\n' "$compositor_name" >&2
+            printf 'Hyprland also exited. Its log follows.\n' >&2
             sed -n '1,240p' "$compositor_log" >&2
         fi
         sed -n '1,260p' "$shell_log" >&2

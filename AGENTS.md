@@ -62,6 +62,10 @@ Read only the sources that apply to the task.
 
 ## Working defaults
 
+- In a fresh linked worktree, run `scripts/setup-worktree.sh` once before
+  building; T3 Code runs it for you. Never build or install from the main
+  checkout on another agent's behalf: it is the live shell's config, and its
+  `build/` installs the plugin the live shell loads from `~/.local`.
 - Validate incrementally. While changing code, run focused tests and
   affected-package checks. For production implementation, run repository-wide
   validation once after the final code change; rerun it only after a relevant
@@ -74,3 +78,17 @@ Read only the sources that apply to the task.
 - Apply `$unslop-response` to every user-facing response.
 
 ## Taste
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in the Plane project `CAELESTIAS` (`xenrya-personal-projects`), reached through its REST API with the key exported in `~/.bashrc`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default labels, created as Plane project labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
