@@ -43,9 +43,13 @@ Searcher {
         Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
     }
 
+    // The preview while one shows, otherwise what the screen shows
     function forScreen(screen: ShellScreen): string {
-        if (showPreview)
-            return previewPath;
+        return showPreview ? previewPath : actualForScreen(screen);
+    }
+
+    // What the screen shows, ignoring any preview
+    function actualForScreen(screen: ShellScreen): string {
         if (GlobalConfig.background.workspaceWallpapers.enabled) {
             const wall = PersistentState.workspaceWallpapers[Hypr.monitorFor(screen)?.activeWorkspace?.name];
             if (wall && !missingWorkspaceWallpapers.includes(wall))
@@ -189,6 +193,9 @@ Searcher {
         command: ["caelestia", "wallpaper", "-p", root.previewPath, ...root.smartArg]
         stdout: StdioCollector {
             onStreamFinished: {
+                // Drop a result that lands after the preview closed, unless an accepted wallpaper holds its colours
+                if (!root.showPreview && !root.previewColourLock)
+                    return;
                 Colours.load(text, true);
                 Colours.showPreview = true;
             }
