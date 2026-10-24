@@ -123,6 +123,18 @@ Searcher {
             return root.list.map(w => w.path).join("\n");
         }
 
+        function clearWorkspace(name: string): void {
+            if (!PersistentState.workspaceWallpapers.hasOwnProperty(name))
+                return;
+            const walls = Object.assign({}, PersistentState.workspaceWallpapers);
+            delete walls[name];
+            PersistentState.workspaceWallpapers = walls;
+        }
+
+        function clearWorkspaces(): void {
+            PersistentState.workspaceWallpapers = {};
+        }
+
         target: "wallpaper"
     }
 
