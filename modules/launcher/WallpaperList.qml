@@ -46,7 +46,7 @@ PathView {
     }
 
     function resetSelection(): void {
-        const wallpaper = Wallpapers.wallpaperFor(launcherScreen);
+        const wallpaper = Wallpapers.actualForScreen(launcherScreen);
         currentIndex = scriptModel.search ? 0 : scriptModel.values.findIndex(w => w.path === wallpaper);
     }
 
