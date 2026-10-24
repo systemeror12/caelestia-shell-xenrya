@@ -44,8 +44,10 @@ Searcher {
     }
 
     function forScreen(screen: ShellScreen): string {
-        if (showPreview)
-            return previewPath;
+        return showPreview ? previewPath : wallpaperFor(screen);
+    }
+
+    function wallpaperFor(screen: ShellScreen): string {
         if (GlobalConfig.background.workspaceWallpapers.enabled) {
             const wall = PersistentState.workspaceWallpapers[Hypr.monitorFor(screen)?.activeWorkspace?.name];
             if (wall && !missingWorkspaceWallpapers.includes(wall))

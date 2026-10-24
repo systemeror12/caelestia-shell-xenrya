@@ -15,9 +15,6 @@ PathView {
     required property var panels
     required property var content
 
-    // Read on the model's first update, before any card is current, so forScreen cannot return this list's preview
-    property string screenWallpaper
-
     readonly property ShellScreen launcherScreen: (QsWindow.window as QsWindow)?.screen ?? null
     readonly property int itemWidth: Tokens.sizes.launcher.wallpaperWidth * 0.8 + Tokens.padding.medium * 2
 
@@ -48,8 +45,9 @@ PathView {
         return visible;
     }
 
-    function selectScreenWallpaper(): void {
-        currentIndex = scriptModel.search ? 0 : scriptModel.values.findIndex(w => w.path === screenWallpaper);
+    function resetSelection(): void {
+        const wallpaper = Wallpapers.wallpaperFor(launcherScreen);
+        currentIndex = scriptModel.search ? 0 : scriptModel.values.findIndex(w => w.path === wallpaper);
     }
 
     model: ScriptModel {
@@ -58,15 +56,11 @@ PathView {
         readonly property string search: root.search.text.split(" ").slice(1).join(" ")
 
         values: Wallpapers.query(search)
-        onValuesChanged: {
-            if (!root.screenWallpaper)
-                root.screenWallpaper = Wallpapers.forScreen(root.launcherScreen);
-            root.selectScreenWallpaper();
-        }
+        onValuesChanged: root.resetSelection()
     }
 
     // Completing under an asynchronous Loader resets the index to 0, so select again
-    Component.onCompleted: selectScreenWallpaper()
+    Component.onCompleted: resetSelection()
     Component.onDestruction: Wallpapers.stopPreview()
 
     onCurrentItemChanged: {
