@@ -21,7 +21,8 @@ Searcher {
     property string previewPath
     property string actualCurrent
     property bool previewColourLock
-    property bool pendingPreviewClear
+    // Keep the preview colours while a preview shows or an accepted wallpaper holds them
+    readonly property bool previewColoursWanted: showPreview || previewColourLock
     property bool ignoreNextLoad: true
     property list<string> missingWorkspaceWallpapers
 
@@ -83,6 +84,9 @@ Searcher {
     function preview(path: string): void {
         previewPath = path;
         showPreview = true;
+        // Previewing another wallpaper ends the hold, so an accept whose path.txt never lands can't keep it
+        if (path !== actualCurrent)
+            previewColourLock = false;
 
         if (Colours.scheme === "dynamic")
             getPreviewColoursProc.running = true;
@@ -90,16 +94,12 @@ Searcher {
 
     function stopPreview(): void {
         showPreview = false;
-        if (previewColourLock)
-            pendingPreviewClear = true;
-        else
-            Colours.showPreview = false;
     }
 
     Component.onCompleted: checkWorkspaceWallpapers()
 
-    onPreviewColourLockChanged: {
-        if (!previewColourLock && pendingPreviewClear)
+    onPreviewColoursWantedChanged: {
+        if (!previewColoursWanted)
             Colours.showPreview = false;
     }
 
@@ -205,8 +205,8 @@ Searcher {
         command: ["caelestia", "wallpaper", "-p", root.previewPath, ...root.smartArg]
         stdout: StdioCollector {
             onStreamFinished: {
-                // Drop a result that lands after the preview closed, unless an accepted wallpaper holds its colours
-                if (!root.showPreview && !root.previewColourLock)
+                // Drop a result that lands after the preview colours are no longer wanted
+                if (!root.previewColoursWanted)
                     return;
                 Colours.load(text, true);
                 Colours.showPreview = true;
