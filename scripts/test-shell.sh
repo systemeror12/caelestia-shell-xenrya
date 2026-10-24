@@ -149,7 +149,7 @@ if [[ -d $host_config_dir/caelestia ]]; then
     cp -a -- "$host_config_dir/caelestia" "$config_dir/"
 fi
 mkdir -p "$state_dir/caelestia"
-for state_name in wallpaper scheme.json apps.sqlite sequences.txt; do
+for state_name in wallpaper state.json scheme.json apps.sqlite sequences.txt; do
     if [[ -e $host_state_dir/caelestia/$state_name || -L $host_state_dir/caelestia/$state_name ]]; then
         cp -a -- "$host_state_dir/caelestia/$state_name" "$state_dir/caelestia/"
     fi
