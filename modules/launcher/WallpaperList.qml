@@ -15,13 +15,14 @@ PathView {
     required property var panels
     required property var content
 
-    // Taken once when the list opens, before it starts a preview: forScreen returns the preview while one shows
+    // Read on the model's first update, before any card is current, so forScreen cannot return this list's preview
     property string screenWallpaper
 
+    readonly property ShellScreen launcherScreen: (QsWindow.window as QsWindow)?.screen ?? null
     readonly property int itemWidth: Tokens.sizes.launcher.wallpaperWidth * 0.8 + Tokens.padding.medium * 2
 
     readonly property int numItems: {
-        const screen = (QsWindow.window as QsWindow)?.screen;
+        const screen = launcherScreen;
         if (!screen)
             return 0;
 
@@ -47,19 +48,25 @@ PathView {
         return visible;
     }
 
+    function selectScreenWallpaper(): void {
+        currentIndex = scriptModel.search ? 0 : scriptModel.values.findIndex(w => w.path === screenWallpaper);
+    }
+
     model: ScriptModel {
         id: scriptModel
 
         readonly property string search: root.search.text.split(" ").slice(1).join(" ")
 
         values: Wallpapers.query(search)
-        onValuesChanged: root.currentIndex = search ? 0 : values.findIndex(w => w.path === root.screenWallpaper)
+        onValuesChanged: {
+            if (!root.screenWallpaper)
+                root.screenWallpaper = Wallpapers.forScreen(root.launcherScreen);
+            root.selectScreenWallpaper();
+        }
     }
 
-    Component.onCompleted: {
-        screenWallpaper = Wallpapers.forScreen((QsWindow.window as QsWindow)?.screen);
-        currentIndex = Wallpapers.list.findIndex(w => w.path === screenWallpaper);
-    }
+    // Completing under an asynchronous Loader resets the index to 0, so select again
+    Component.onCompleted: selectScreenWallpaper()
     Component.onDestruction: Wallpapers.stopPreview()
 
     onCurrentItemChanged: {
