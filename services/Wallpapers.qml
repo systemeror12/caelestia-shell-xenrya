@@ -84,6 +84,9 @@ Searcher {
     function preview(path: string): void {
         previewPath = path;
         showPreview = true;
+        // Previewing another wallpaper ends the hold, so an accept whose path.txt never lands can't keep it
+        if (path !== actualCurrent)
+            previewColourLock = false;
 
         if (Colours.scheme === "dynamic")
             getPreviewColoursProc.running = true;
